@@ -2,7 +2,7 @@
 
 scratch:
   resolution: 1024
-  train_batch_size: 2
+  train_batch_size: 1
   #train_batch_size: 1
   # Use 1 in debugging
   num_train_workers: 1
@@ -19,43 +19,56 @@ dataset:
   img_folder: D:\workspace_torch\MOSE_release\train\train\JPEGImages # PATH to MOSE JPEGImages folder
   gt_folder: D:\workspace_torch\MOSE_release\train\train\Annotations  # PATH to MOSE Annotations folder
   file_list_txt: D:\workspace_torch\sam2\training\assets\MOSE_sample_train_list.txt # Optional PATH to filelist containing a subset of videos to be used for training
+  train_db_path: [ F:\workspace_tf\training_db\segmentation\3d_slice\hdf5_rgt_oa\anything\pre_train\train_hdf5.txt, F:\workspace_tf\training_db\segmentation\3d_phase\hdf5_rgt_oa\anything\pre_train\train_hdf5.txt ]
+  val_db_path: [ F:\workspace_tf\training_db\segmentation\3d_slice\hdf5_rgt_oa\anything\pre_train\val_hdf5.txt, F:\workspace_tf\training_db\segmentation\3d_phase\hdf5_rgt_oa\anything\pre_train\val_hdf5.txt ]
   multiplier: 2
 
 # Video transforms
 vos:
   train_transforms:
-    - _target_: training.dataset.transforms.ComposeAPI
-      transforms:
-        - _target_: training.dataset.transforms.RandomHorizontalFlip
-          consistent_transform: True
-        - _target_: training.dataset.transforms.RandomAffine
-          degrees: 25
-          shear: 20
-          image_interpolation: bilinear
-          consistent_transform: True
-        - _target_: training.dataset.transforms.RandomResizeAPI
-          sizes: ${scratch.resolution}
-          square: true
-          consistent_transform: True
-        - _target_: training.dataset.transforms.ColorJitter
-          consistent_transform: True
-          brightness: 0.1
-          contrast: 0.03
-          saturation: 0.03
-          hue: null
-        - _target_: training.dataset.transforms.RandomGrayscale
-          p: 0.05
-          consistent_transform: True
-        - _target_: training.dataset.transforms.ColorJitter
-          consistent_transform: False
-          brightness: 0.1
-          contrast: 0.05
-          saturation: 0.05
-          hue: null
-        - _target_: training.dataset.transforms.ToTensorAPI
-        - _target_: training.dataset.transforms.NormalizeAPI
-          mean: [0.485, 0.456, 0.406]
-          std: [0.229, 0.224, 0.225]
+    _target_: training.dataset.transforms.ComposeAPI
+    transforms:
+      - _target_: training.neo_dataset.augmentation.rand_affine.RandomAffine
+        degrees: [ -30, 30 ]
+        scale: [ 0.9, 1.1 ]
+        translate: [ 0.1, 0.1 ]
+        shear: [ -5, 5, -5, 5 ]
+        p_rot: 0.5
+        p_scale: 0.5
+        p_trans: 0.5
+        p_shear: 0.25
+        image_interpolation: bilinear
+      - _target_: training.neo_dataset.augmentation.rand_horizontal_flip.RandomHorizontalFlip
+        p: 0.5
+      - _target_: monai.transforms.RandGaussianSmoothd
+        keys: [ "data" ]
+        sigma_x: [ 0.5, 1.0 ]
+        sigma_y: [ 0.5, 1.0 ]
+        sigma_z: [ 0.0, 0.0 ]
+        prob: 0.1
+      - _target_: monai.transforms.RandGaussianNoised
+        keys: [ "data" ]
+        prob: 0.25
+      - _target_: monai.transforms.RandScaleIntensityd
+        keys: [ "data" ]
+        factors: 0.25
+        prob: 0.15
+      - _target_: monai.transforms.RandScaleIntensityFixedMeand
+        keys: [ "data" ]
+        factors: 0.25
+        prob: 0.15
+      - _target_: monai.transforms.RandAdjustContrastd
+        keys: [ "data" ]
+        gamma: [ 0.7, 1.3 ]
+        invert_image: True
+        prob: 0.1
+        retain_stats: True
+      - _target_: monai.transforms.RandAdjustContrastd
+        keys: [ "data" ]
+        gamma: [ 0.7, 1.3 ]
+        invert_image: False
+        prob: 0.3
+        retain_stats: True
 
 trainer:
   _target_: training.trainer.Trainer
@@ -83,8 +96,8 @@ trainer:
           scale: null
           temperature: 10000
         d_model: 256
-        backbone_channel_list: [896, 448, 224, 112]
-        fpn_top_down_levels: [2, 3]  # output level 0 and 1 directly use the backbone features
+        backbone_channel_list: [ 896, 448, 224, 112 ]
+        fpn_top_down_levels: [ 2, 3 ]  # output level 0 and 1 directly use the backbone features
         fpn_interp_model: nearest
 
     memory_attention:
@@ -100,7 +113,7 @@ trainer:
         self_attention:
           _target_: sam2.modeling.sam.transformer.RoPEAttention
           rope_theta: 10000.0
-          feat_sizes: [64, 64]
+          feat_sizes: [ 64, 64 ]
           embedding_dim: 256
           num_heads: 1
           downsample_rate: 1
@@ -111,7 +124,7 @@ trainer:
         cross_attention:
           _target_: sam2.modeling.sam.transformer.RoPEAttention
           rope_theta: 10000.0
-          feat_sizes: [64, 64]
+          feat_sizes: [ 64, 64 ]
           rope_k_repeat: True
           embedding_dim: 256
           num_heads: 1
@@ -121,29 +134,29 @@ trainer:
       num_layers: 4
 
     memory_encoder:
-        _target_: sam2.modeling.memory_encoder.MemoryEncoder
-        out_dim: 64
-        position_encoding:
-          _target_: sam2.modeling.position_encoding.PositionEmbeddingSine
-          num_pos_feats: 64
-          normalize: true
-          scale: null
-          temperature: 10000
-        mask_downsampler:
-          _target_: sam2.modeling.memory_encoder.MaskDownSampler
-          kernel_size: 3
-          stride: 2
-          padding: 1
-        fuser:
-          _target_: sam2.modeling.memory_encoder.Fuser
-          layer:
-            _target_: sam2.modeling.memory_encoder.CXBlock
-            dim: 256
-            kernel_size: 7
-            padding: 3
-            layer_scale_init_value: 1e-6
-            use_dwconv: True  # depth-wise convs
-          num_layers: 2
+      _target_: sam2.modeling.memory_encoder.MemoryEncoder
+      out_dim: 64
+      position_encoding:
+        _target_: sam2.modeling.position_encoding.PositionEmbeddingSine
+        num_pos_feats: 64
+        normalize: true
+        scale: null
+        temperature: 10000
+      mask_downsampler:
+        _target_: sam2.modeling.memory_encoder.MaskDownSampler
+        kernel_size: 3
+        stride: 2
+        padding: 1
+      fuser:
+        _target_: sam2.modeling.memory_encoder.Fuser
+        layer:
+          _target_: sam2.modeling.memory_encoder.CXBlock
+          dim: 256
+          kernel_size: 7
+          padding: 3
+          layer_scale_init_value: 1e-6
+          use_dwconv: True  # depth-wise convs
+        num_layers: 2
 
     num_maskmem: 7
     image_size: ${scratch.resolution}
@@ -203,7 +216,7 @@ trainer:
     
     num_init_cond_frames_for_eval: 1  # only mask on the first frame
     forward_backbone_per_frame_for_eval: True
-    
+
 
   data:
     train:
@@ -213,29 +226,20 @@ trainer:
         - ${scratch.train_batch_size}
 
       datasets:
-        - _target_: training.dataset.utils.RepeatFactorWrapper
-          dataset:
-            _target_: training.dataset.utils.ConcatDataset
-            datasets:
-            - _target_: training.dataset.vos_dataset.VOSDataset
-              transforms: ${vos.train_transforms}
-              training: true
-              video_dataset:
-                _target_: training.dataset.vos_raw_dataset.PNGRawDataset
-                img_folder: ${dataset.img_folder}
-                gt_folder: ${dataset.gt_folder}
-                file_list_txt: ${dataset.file_list_txt}
-              sampler:
-                _target_: training.dataset.vos_sampler.RandomUniformSampler
-                num_frames: ${scratch.num_frames}
-                max_num_objects: ${scratch.max_num_objects}
-              multiplier: ${dataset.multiplier}
-      shuffle: True
+        - _target_: training.neo_dataset.neo_dataset.NeoDataset
+          db_path_list: ${dataset.train_db_path}
+          transforms: ${vos.train_transforms}
+          num_gpus: 1
+          batch_size: ${scratch.train_batch_size}
+          epoch_size: ${scratch.num_epochs}
+          image_size: ${scratch.resolution}
+          shuffle: True
+      shuffle: False
       num_workers: ${scratch.num_train_workers}
       pin_memory: True
       drop_last: True
       collate_fn:
-        _target_: training.utils.data_utils.collate_fn
+        _target_: training.neo_dataset.neo_dataset.NeoDataset.collate_fn
         _partial_: true
         dict_key: all
 
@@ -282,7 +286,7 @@ trainer:
             value: 0.0
           param_names:
             - '*bias*'
-          module_cls_names: ['torch.nn.LayerNorm']
+          module_cls_names: [ 'torch.nn.LayerNorm' ]
 
   loss:
     all:
@@ -299,14 +303,13 @@ trainer:
       focal_alpha_obj_score: -1.0
 
   distributed:
-#    backend: nccl
     backend: gloo
     find_unused_parameters: True
 
   logging:
     tensorboard_writer:
       _target_: training.utils.logger.make_tensorboard_logger
-      log_dir:  ${launcher.experiment_log_dir}/tensorboard
+      log_dir: ${launcher.experiment_log_dir}/tensorboard
       flush_secs: 120
       should_log: True
     log_dir: ${launcher.experiment_log_dir}/logs
@@ -326,7 +329,7 @@ trainer:
       state_dict:
         _target_: training.utils.checkpoint_utils.load_checkpoint_and_apply_kernels
         checkpoint_path: D:\workspace_torch\sam2\checkpoints\sam2.1_hiera_base_plus.pt # PATH to SAM 2.1 checkpoint
-        ckpt_state_dict_keys: ['model']
+        ckpt_state_dict_keys: [ 'model' ]
 
 launcher:
   num_nodes: 1
@@ -342,5 +345,5 @@ submitit:
   use_cluster: false
   timeout_hour: 24
   name: null
-  port_range: [10000, 65000]
+  port_range: [ 10000, 65000 ]
 

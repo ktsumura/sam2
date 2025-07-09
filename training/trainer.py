@@ -15,7 +15,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional
 
 import numpy as np
-
 import torch
 import torch.distributed as dist
 import torch.nn as nn
@@ -23,7 +22,6 @@ from hydra.utils import instantiate
 from iopath.common.file_io import g_pathmgr
 
 from training.optimizer import construct_optimizer
-
 from training.utils.checkpoint_utils import (
     assert_skipped_parameters_are_frozen,
     exclude_params_matching_unix_pattern,
@@ -32,9 +30,7 @@ from training.utils.checkpoint_utils import (
 )
 from training.utils.data_utils import BatchedVideoDatapoint
 from training.utils.distributed import all_reduce_max, barrier, get_rank
-
 from training.utils.logger import Logger, setup_logging
-
 from training.utils.train_utils import (
     AverageMeter,
     collect_dict_keys,
@@ -52,7 +48,6 @@ from training.utils.train_utils import (
     set_seeds,
     setup_distributed_backend,
 )
-
 
 CORE_LOSS_KEY = "core_loss"
 
@@ -522,7 +517,8 @@ class Trainer:
             self.val_dataset = instantiate(self.data_conf.get(Phase.VAL, None))
 
         if self.mode in ["train", "train_only"]:
-            self.train_dataset = instantiate(self.data_conf.train)
+            # _convert_="all" converts all ListConfig and DictConfig objects to native lists and dicts before instantiation
+            self.train_dataset = instantiate(self.data_conf.train, _convert_="all")
 
     def run_train(self):
 
