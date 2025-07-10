@@ -6,7 +6,7 @@ import torchvision.transforms.v2 as T
 import torchvision.transforms.v2.functional as func2
 from torchvision.transforms import InterpolationMode
 
-from training.neo_dataset.neo_data_point import NeoDataPoint
+from training.neosoft.dataset.neo_data_point import NeoDataPoint
 
 
 class RandomAffine:

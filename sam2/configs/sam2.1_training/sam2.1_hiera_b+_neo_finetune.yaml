@@ -3,11 +3,9 @@
 scratch:
   resolution: 1024
   train_batch_size: 1
-  #train_batch_size: 1
   # Use 1 in debugging
-  num_train_workers: 1
-  #num_train_workers: 10
-  num_frames: 8
+  num_train_workers: 2
+  num_frames: 12
   max_num_objects: 3
   base_lr: 5.0e-6
   vision_lr: 3.0e-06
@@ -28,7 +26,7 @@ vos:
   train_transforms:
     _target_: training.dataset.transforms.ComposeAPI
     transforms:
-      - _target_: training.neo_dataset.augmentation.rand_affine.RandomAffine
+      - _target_: training.neosoft.augmentation.rand_affine.RandomAffine
         degrees: [ -30, 30 ]
         scale: [ 0.9, 1.1 ]
         translate: [ 0.1, 0.1 ]
@@ -38,7 +36,7 @@ vos:
         p_trans: 0.5
         p_shear: 0.25
         image_interpolation: bilinear
-      - _target_: training.neo_dataset.augmentation.rand_horizontal_flip.RandomHorizontalFlip
+      - _target_: training.neosoft.augmentation.rand_horizontal_flip.RandomHorizontalFlip
         p: 0.5
       - _target_: monai.transforms.RandGaussianSmoothd
         keys: [ "data" ]
@@ -207,7 +205,7 @@ trainer:
     rand_frames_to_correct_for_train: True  # random #init-cond-frame ~ 2
     add_all_frames_to_correct_as_cond: True  # when a frame receives a correction click, it becomes a conditioning frame (even if it's not initially a conditioning frame)
     # maximum 2 initial conditioning frames
-    num_init_cond_frames_for_train: 2
+    num_init_cond_frames_for_train: 1
     rand_init_cond_frames_for_train: True  # random 1~2
     num_correction_pt_per_frame: 7
     use_act_ckpt_iterative_pt_sampling: false
@@ -226,10 +224,11 @@ trainer:
         - ${scratch.train_batch_size}
 
       datasets:
-        - _target_: training.neo_dataset.neo_dataset.NeoDataset
+        - _target_: training.neosoft.dataset.neo_dataset.NeoDataset
           db_path_list: ${dataset.train_db_path}
           transforms: ${vos.train_transforms}
-          num_gpus: 1
+          num_gpus: ${launcher.gpus_per_node}
+          num_frames: ${scratch.num_frames}
           batch_size: ${scratch.train_batch_size}
           epoch_size: ${scratch.num_epochs}
           image_size: ${scratch.resolution}
@@ -239,7 +238,7 @@ trainer:
       pin_memory: True
       drop_last: True
       collate_fn:
-        _target_: training.neo_dataset.neo_dataset.NeoDataset.collate_fn
+        _target_: training.neosoft.dataset.neo_dataset.NeoDataset.collate_fn
         _partial_: true
         dict_key: all
 
@@ -290,7 +289,7 @@ trainer:
 
   loss:
     all:
-      _target_: training.loss_fns.MultiStepMultiMasksAndIous
+      _target_: training.neosoft.loss.loss_fns.MultiStepMultiMasksAndIousIfTargetIsPresent
       weight_dict:
         loss_mask: 20
         loss_dice: 1

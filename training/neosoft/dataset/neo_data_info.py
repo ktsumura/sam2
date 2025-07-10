@@ -1,4 +1,4 @@
-from training.neo_dataset.sam2_contour_type import SAM2ContourType
+from training.neosoft.constants.sam2_contour_type import SAM2ContourType
 
 
 class NeoDataInfo():

@@ -5,7 +5,7 @@ DB reader to read multiple HDF5 files
 """
 
 from training.dataset.transforms import ComposeAPI
-from training.neo_dataset.readdb.hdf5_reader import HDF5Reader
+from training.neosoft.readdb.hdf5_reader import HDF5Reader
 
 
 class HDF5MultiReader:
@@ -13,10 +13,11 @@ class HDF5MultiReader:
     HDF5 writer
     """
 
-    def __init__(self, db_reader_state, transforms: ComposeAPI, image_size):
+    def __init__(self, db_reader_state, transforms: ComposeAPI, num_frames, image_size):
         self._state = db_reader_state
         self._reader_dict = dict()
         self._transforms = transforms
+        self._num_frames = num_frames
         self._image_size = image_size
 
     def __getitem__(self, data_idx):
@@ -37,4 +38,4 @@ class HDF5MultiReader:
 
     def _get_hdf5_reader(self, db_path):
         db_state = self._state.db_state_dict[db_path]
-        return HDF5Reader(db_path, db_state, self._transforms, self._image_size)
+        return HDF5Reader(db_path, db_state, self._transforms, self._num_frames, self._image_size)

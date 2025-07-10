@@ -11,8 +11,8 @@ from typing import List
 import h5py
 import numpy as np
 
-from training.neo_dataset.neo_data_info import NeoDataInfo
-from training.neo_dataset.sam2_contour_type import SAM2ContourType
+from training.neosoft.constants.sam2_contour_type import SAM2ContourType
+from training.neosoft.dataset.neo_data_info import NeoDataInfo
 
 
 class DbReaderState(object):

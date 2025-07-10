@@ -9,9 +9,9 @@ import torch
 from torch.utils.data import Dataset
 
 from training.dataset.transforms import ComposeAPI
-from training.neo_dataset.neo_data_point import NeoDataPoint
-from training.neo_dataset.readdb.db_reader_state import DbReaderState
-from training.neo_dataset.readdb.hdf5_multi_reader import HDF5MultiReader
+from training.neosoft.dataset.neo_data_point import NeoDataPoint
+from training.neosoft.readdb.db_reader_state import DbReaderState
+from training.neosoft.readdb.hdf5_multi_reader import HDF5MultiReader
 from training.utils.data_utils import BatchedVideoDatapoint, BatchedVideoMetaData
 
 
@@ -20,12 +20,13 @@ class NeoDataset(Dataset):
                  db_path_list: List[str],
                  transforms: ComposeAPI,
                  num_gpus: int=1,
+                 num_frames: int=8,
                  batch_size: int=1,
                  epoch_size: int=1,
                  image_size: int=1024,
                  shuffle:bool=True):
         self._db_reader_state = DbReaderState(db_path_list, num_gpus, batch_size, epoch_size, shuffle)
-        self._db_reader = HDF5MultiReader(self._db_reader_state, transforms, image_size)
+        self._db_reader = HDF5MultiReader(self._db_reader_state, transforms, num_frames, image_size)
 
         # Calculate the DB size
         steps_per_epoch = self._db_reader_state.calc_steps_per_epoch()

@@ -13,10 +13,10 @@ import torchvision.transforms.v2.functional as funcv2
 from monai.transforms import RandGaussianSmoothd, RandGaussianNoised, RandScaleIntensityd, RandScaleIntensityFixedMeand, \
     RandAdjustContrastd
 
-from training.neo_dataset.neo_data_info import NeoDataInfo
-from training.neo_dataset.neo_data_point import NeoDataPoint
-from training.neo_dataset.readdb.db_reader import DbReader
-from training.neo_dataset.sam2_contour_type import SAM2ContourType
+from training.neosoft.constants.sam2_contour_type import SAM2ContourType
+from training.neosoft.dataset.neo_data_info import NeoDataInfo
+from training.neosoft.dataset.neo_data_point import NeoDataPoint
+from training.neosoft.readdb.db_reader import DbReader
 
 
 class HDF5Reader(DbReader):
@@ -27,13 +27,13 @@ class HDF5Reader(DbReader):
     """
     HDF5 writer
     """
-    def __init__(self, db_path, db_reader_state, transforms, image_size):
+    def __init__(self, db_path, db_reader_state, transforms, num_frames, image_size):
         DbReader.__init__(self, db_path)
         self._state = db_reader_state
         self._db_images_labels = self._read_db()
         self._transforms = transforms
         self._image_size = image_size
-        self._max_num_frames = 10
+        self._num_frames = num_frames
 
     def __getitem__(self, neo_data_info: NeoDataInfo):
         return self._read(self._db_images_labels, neo_data_info)
@@ -223,9 +223,9 @@ class HDF5Reader(DbReader):
         return order
 
     def _clip_frames(self, datapoint):
-        if datapoint.neo_data_info.depth > self._max_num_frames:
-            datapoint.image = datapoint.image[:, 0:self._max_num_frames, ...]
-            datapoint.contour = datapoint.contour[:, 0:self._max_num_frames, ...]
+        if datapoint.neo_data_info.depth > self._num_frames:
+            datapoint.image = datapoint.image[:, 0:self._num_frames, ...]
+            datapoint.contour = datapoint.contour[:, 0:self._num_frames, ...]
 
     def _resize(self, datapoint: NeoDataPoint):
         resized_image_list = list()

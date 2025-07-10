@@ -9,3 +9,8 @@ _C.*
 outputs/*
 checkpoints/*.pt
 demo/backend/checkpoints/*.pt
+keggle_chest_ct/*
+training/sam2_logs/*
+fine_tuned_base_plus/*
+fine_tuned_small/*
+fine_tuned_tiny/*

@@ -3,7 +3,7 @@ import random
 import torch
 import torchvision.transforms.v2.functional as func2
 
-from training.neo_dataset.neo_data_point import NeoDataPoint
+from training.neosoft.dataset.neo_data_point import NeoDataPoint
 
 
 class RandomHorizontalFlip:
